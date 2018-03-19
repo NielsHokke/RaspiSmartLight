@@ -3,6 +3,7 @@ import threading
 import MainLight
 import RGBLight
 import json
+from neopixel import Color
 
 # Connect to webSocket
 context = zmq.Context()
@@ -125,6 +126,7 @@ try:
 				threadHandleM.start()
 			except:
 				print "Error: unable to start all threads"
+
 			status = MainLight.status()
 			status['Midden'] = M
 			reply = json.dumps(status)
@@ -225,9 +227,55 @@ try:
 			print(reply)
 
 		elif "set_temp" in message:
-			# set_temp_255
+			stopThreads(False, False, False, False, True)
+
 			a, b, value = message.split('_')
 			RGBLight.setTemp(int(value))
+
+			reply = json.dumps(MainLight.status())
+			socket.send(reply)
+
+		elif "clear" in message:
+			stopThreads(False, False, False, False, True)
+
+			RGBLight.setColor(Color(0, 0, 0))
+
+			reply = json.dumps(MainLight.status())
+			socket.send(reply)
+
+		elif "set_color" in message:
+			stopThreads(False, False, False, False, True)
+
+			a, b, R, G, B = message.split('_')
+			RGBLight.setColor(Color(int(R), int(G), int(B)))
+
+			reply = json.dumps(MainLight.status())
+			socket.send(reply)
+
+		elif "rainbow" in message:
+			stopThreads(False, False, False, False, True)
+
+			try:
+				threadHandleRGB = threading.Thread(name='rainbow', target=RGBLight.rainbowCycle, args=(10, 5, True))
+				threadHandleRGB.daemon = True
+				threadHandleRGB.start()
+			except:
+				print "Error: unable to start all threads"
+
+			reply = json.dumps(MainLight.status())
+			socket.send(reply)
+
+		elif "fade_to_color" in message:
+			stopThreads(False, False, False, False, True)
+
+			a, b, c, R, G, B, time = message.split('_')
+
+			try:
+				threadHandleRGB = threading.Thread(name='fadetocolor', target=RGBLight.fadeToColor, args=(Color(int(R), int(G), int(B)), float(time), True))
+				threadHandleRGB.daemon = True
+				threadHandleRGB.start()
+			except:
+				print "Error: unable to start all threads"
 
 			reply = json.dumps(MainLight.status())
 			socket.send(reply)
@@ -240,7 +288,7 @@ try:
 except KeyboardInterrupt:
 	pass
 
-print "clean exit!"
+print "\nclean exit!"
 stopThreads(True, True, True, True)
 MainLight.cleanup()
 RGBLight.cleanup()

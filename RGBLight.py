@@ -24,10 +24,12 @@ stopThreadRGB = False
 # Fade Variables
 StepsPerSec = 100
 
-tempOn = True
-middenTemp = 255
-rechtsTemp = 255
-linksbovenTemp = 255
+tempOn = False
+middenTemp = 127
+rechtsTemp = 127
+linksbovenTemp = 127
+
+lastColor = Color(0, 0, 0)
 
 def setup():
 	global strip
@@ -35,16 +37,64 @@ def setup():
 
 # Called on exit
 def cleanup():
-	setColor(Color(0,0,0))
+	setColor(Color(0, 0, 0))
+
+
+def getRGB(color):
+	return (color >> 16) & 0xff, (color >> 8) & 0xff, (color >> 0) & 0xff
+
+
+def mapColor(Cfrom, Cto, step, totalSteps):
+
+	Rf, Gf, Bf = getRGB(Cfrom)
+	Rt, Gt, Bt = getRGB(Cto)
+
+	R = (step - 0) * (Rt - Rf) / (totalSteps - 0) + Rf
+	G = (step - 0) * (Gt - Gf) / (totalSteps - 0) + Gf
+	B = (step - 0) * (Bt - Bf) / (totalSteps - 0) + Bf
+
+	return Color(R, G, B)
+
 
 def setColor(color):
 	global strip
 	global tempOn
+	global lastColor
 	tempOn = False
 
 	for i in range(strip.numPixels()):
 		strip.setPixelColor(i, color)
 	strip.show()
+
+	lastColor = color
+
+
+def fadeToColor(color, TotalTime, thread=False):
+	global strip
+	global lastColor
+	global stopThreadRGB
+	global tempOn
+	tempOn = False
+	stopThreadRGB = False
+
+	TotalSteps = int(StepsPerSec * TotalTime)
+	if TotalSteps == 0: TotalSteps = 1
+	TimeStep = (TotalTime * 1.0) / TotalSteps
+
+	for j in range(0, TotalSteps):
+		c = mapColor(lastColor, color, j, TotalSteps)
+
+		for i in range(strip.numPixels()):
+			strip.setPixelColor(i, c)
+		strip.show()
+
+		if stopThreadRGB and thread:
+			lastColor = c
+			return
+
+		time.sleep(TimeStep)
+
+	lastColor = c
 
 
 # Define functions which animate LEDs in various ways.
@@ -86,16 +136,24 @@ def rainbow(wait_ms=20, iterations=1):
 		time.sleep(wait_ms / 1000.0)
 
 
-def rainbowCycle(wait_ms=20, iterations=5):
+def rainbowCycle(wait_ms=20, iterations=5, thread=False):
+	global stopThreadRGB
+	stopThreadRGB = False
 	global strip
 	global tempOn
 	tempOn = False
 
-	for j in range(256 * iterations):
-		for i in range(strip.numPixels()):
-			strip.setPixelColor(i, wheel((int(i * 256 / strip.numPixels()) + j) & 255))
-		strip.show()
-		time.sleep(wait_ms / 1000.0)
+	while True:
+		for j in range(256 * iterations):
+			for i in range(strip.numPixels()):
+				strip.setPixelColor(i, wheel((int(i * 256 / strip.numPixels()) + j) & 255))
+			strip.show()
+			if stopThreadRGB and thread:
+				return
+			time.sleep(wait_ms / 1000.0)
+
+		if not thread:
+			break
 
 
 def theaterChaseRainbow(wait_ms=50):
@@ -150,7 +208,7 @@ def tempToColor(temp, fade):
 def setMtemp(fade):
 	global strip
 	if tempOn:
-		for i in range(61, 177):
+		for i in range(60, 177):
 			strip.setPixelColor(i, tempToColor(middenTemp, fade))
 		strip.show()
 
@@ -191,64 +249,36 @@ def setTemp(temp):
 	setLBtemp(status['LinksBoven'])
 
 
-# def fadeToTemp(M, R, LB, LO, tempf, tempt, TotalTime):
-# 	global strip
-#
-# 	TotalSteps = int(StepsPerSec * TotalTime)
-# 	if TotalSteps == 0: TotalSteps = 1
-# 	TimeStep = (TotalTime * 1.0) / TotalSteps
-#
-# 	tempStep = (tempt - tempf * 1.0) / TotalSteps
-#
-# 	for j in range(0, TotalSteps):
-# 		if M:
-# 			for i in range(61, 177):
-# 				strip.setPixelColor(i, tempToColor(tempt, (j/TotalSteps) * 100))
-# 		if R:
-# 			for i in range(60):
-# 				strip.setPixelColor(i, tempToColor(tempt, (j/TotalSteps) * 100))
-# 		if LB:
-# 			for i in range(178, strip.numPixels()):
-# 				strip.setPixelColor(i, tempToColor(tempt, (j/TotalSteps) * 100))
-#
-#
-#
-#
-# 		for i in range(strip.numPixels()):
-#
-# 		strip.show()
-#
-#
-# 		time.sleep(TimeStep)
+if __name__ == "__main__":
+	setup()
+
+	try:
+		# while False:
+			# colorWipe(Color(255, 0, 0), 10)  # Red wipe
+			# colorWipe(Color(0, 255, 0), 10)  # Green wipe
+			# colorWipe(Color(0, 0, 255), 10)  # Blue wipe
+
+			# theaterChase(Color(255, 0, 0), 50)  # Red theaterChase
+			# theaterChase(Color(0, 255, 0), 50)  # Green theaterChase
+			# theaterChase(Color(0, 0, 255), 50)  # Blue theaterChase
+
+			# rainbow(10)
+
+			# rainbowCycle(10)
+
+			# theaterChaseRainbow(50)
+
+			# playImage('dubbelwave.png')
+			# pass
+
+		# setColor(Color(255,0,0))
+		fadeToColor(Color(255, 0, 0), 1)
+		fadeToColor(Color(0, 255, 0), 1)
+		fadeToColor(Color(0, 0, 255), 1)
 
 
+	except KeyboardInterrupt:
+		pass
 
-
-
-# setup()
-#
-# try:
-# 	while True:
-# 		# colorWipe(Color(255, 0, 0), 10)  # Red wipe
-# 		# colorWipe(Color(0, 255, 0), 10)  # Green wipe
-# 		# colorWipe(Color(0, 0, 255), 10)  # Blue wipe
-#
-# 		# theaterChase(Color(255, 0, 0), 50)  # Red theaterChase
-# 		# theaterChase(Color(0, 255, 0), 50)  # Green theaterChase
-# 		# theaterChase(Color(0, 0, 255), 50)  # Blue theaterChase
-#
-# 		# rainbow(10)
-#
-# 		# rainbowCycle(10)
-#
-# 		# theaterChaseRainbow(50)
-#
-# 		playImage('dubbelwave.png')
-# 		pass
-#
-#
-# except KeyboardInterrupt:
-# 	pass
-#
-# print "clean exit!"
-# setColor(Color(0, 0, 0))
+	print "clean exit!"
+	setColor(Color(0, 0, 0))
