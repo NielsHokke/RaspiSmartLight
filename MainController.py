@@ -1,9 +1,14 @@
 import zmq
 import threading
-import MainLight
-import RGBLight
 import json
 from neopixel import Color
+from datetime import datetime
+
+import MainLight
+import RGBLight
+import Fan
+
+
 
 # Connect to webSocket
 context = zmq.Context()
@@ -16,6 +21,10 @@ MainLight.setup()
 # Initialise RGBLight
 RGBLight.setup()
 
+# Initialise Fan
+Fan.setup()
+
+
 # Thread variables
 threadHandleM = threading.Thread()
 threadHandleR = threading.Thread()
@@ -24,21 +33,27 @@ threadHandleLO = threading.Thread()
 
 threadHandleRGB = threading.Thread()
 
+threadHandleFAN = threading.Thread()
 
 # Stops selected threads
-def stopThreads(M, R, LB, LO, RGB=False):
+def stopThreads(M, R, LB, LO, RGB=False, FAN=False):
 	global threadHandleM
 	global threadHandleR
 	global threadHandleLB
 	global threadHandleLO
+
 	global threadHandleRGB
-	
+
+	global threadHandleFAN
+
 	MainLight.stopThreadM = M
 	MainLight.stopThreadR = R
 	MainLight.stopThreadLB = LB
 	MainLight.stopThreadLO = LO
 
 	RGBLight.stopThreadRGB = RGB
+
+	Fan.stopThreadFan = FAN
 
 	if M and threadHandleM.isAlive():
 		threadHandleM.join()
@@ -52,12 +67,18 @@ def stopThreads(M, R, LB, LO, RGB=False):
 	if RGB and threadHandleRGB.isAlive():
 		threadHandleRGB.join()
 
+	if FAN and threadHandleFAN.isAlive():
+		threadHandleFAN.join()
+
+
 # Main Command listener
 try:
 	print "listening for commands..."
 	while True:
 		message = socket.recv()
 		print("Received request: %s" % message)
+
+# MAIN LIGHT CMD's
 
 		if "all" in message:
 			stopThreads(True, True, True, True)
@@ -67,7 +88,8 @@ try:
 			time = 0.5
 
 			if 'toggle' in message:
-				if status['Midden'] == 0.0 and status['Rechts'] == 0.0 and status['LinksBoven'] == 0.0 and status['LinksOnder'] == 0.0:
+				if status['Midden'] == 0.0 and status['Rechts'] == 0.0 and status['LinksBoven'] == 0.0 and status[
+					'LinksOnder'] == 0.0:
 					M = 100
 				else:
 					M = 0
@@ -226,11 +248,22 @@ try:
 			socket.send(reply)
 			print(reply)
 
+# RGB LIGHT CMD's
+
 		elif "set_temp" in message:
 			stopThreads(False, False, False, False, True)
 
 			a, b, value = message.split('_')
-			RGBLight.setTemp(int(value))
+			if "day" in value:
+				# try:
+				#     threadHandleRGB = threading.Thread(name='setTempDay', target=RGBLight.setTempDay, args=(10, 5, True))
+				#     threadHandleRGB.daemon = True
+				#     threadHandleRGB.start()
+				# except:
+				#     print "Error: unable to start all threads"
+				pass
+			else:
+				RGBLight.setTemp(int(value))
 
 			reply = json.dumps(MainLight.status())
 			socket.send(reply)
@@ -268,10 +301,11 @@ try:
 		elif "fade_to_color" in message:
 			stopThreads(False, False, False, False, True)
 
-			a, b, c, R, G, B, time = message.split('_')
-
 			try:
-				threadHandleRGB = threading.Thread(name='fadetocolor', target=RGBLight.fadeToColor, args=(Color(int(R), int(G), int(B)), float(time), True))
+				a, b, c, R, G, B, time = message.split('_')
+
+				threadHandleRGB = threading.Thread(name='fadetocolor', target=RGBLight.fadeToColor,
+												   args=(Color(int(R), int(G), int(B)), float(time), True))
 				threadHandleRGB.daemon = True
 				threadHandleRGB.start()
 			except:
@@ -280,6 +314,45 @@ try:
 			reply = json.dumps(MainLight.status())
 			socket.send(reply)
 
+# FAN CMD's
+
+		elif "set_fan_off" in message:
+			stopThreads(False, False, False, False, False, True)
+
+			try:
+				threadHandleFAN = threading.Thread(name='setfan', target=Fan.setFanOff)
+				threadHandleFAN.daemon = True
+				threadHandleFAN.start()
+			except:
+				print "Error: unable to start all threads"
+
+			reply = json.dumps(MainLight.status())
+			socket.send(reply)
+
+		elif "set_fan" in message:
+			stopThreads(False, False, False, False, False, True)
+
+			try:
+				# set_fan_low_30
+				a, b, speed, minutes = message.split('_')
+
+				threadHandleFAN = threading.Thread(name='setfan', target=Fan.setFan, args=(speed, int(minutes)))
+				threadHandleFAN.daemon = True
+				threadHandleFAN.start()
+			except:
+				print "Error: unable to start all threads"
+
+			reply = json.dumps(MainLight.status())
+			socket.send(reply)
+
+
+
+# OTHER CMD's
+
+		elif "test" in message:
+			time = str(datetime.now())
+			print(time + " " + message)
+			socket.send(time)
 
 		else:
 			socket.send("Error: unknown command: " + message)

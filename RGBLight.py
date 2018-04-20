@@ -34,6 +34,7 @@ lastColor = Color(0, 0, 0)
 def setup():
 	global strip
 	strip.begin()
+	setColor(Color(0, 0, 0))
 
 # Called on exit
 def cleanup():
@@ -247,6 +248,10 @@ def setTemp(temp):
 	setMtemp(status['Midden'])
 	setRtemp(status['Rechts'])
 	setLBtemp(status['LinksBoven'])
+
+# def setTempDay():
+
+
 
 
 if __name__ == "__main__":

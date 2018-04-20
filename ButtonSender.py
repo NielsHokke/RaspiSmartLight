@@ -23,7 +23,7 @@ try:
         time.sleep(0.1)
         three = GPIO.input(knopPin)
 
-        if toggle :
+        if toggle:
             if not (one or two or three):
                 socket.send("all_toggle")
                 print socket.recv()
