@@ -2,9 +2,9 @@ import RPi.GPIO as GPIO
 import time
 
 # Strip Pins
-FanSpeedLowPin = 21
-FanSpeedMediumPin = 20
-FanSpeedHighPin = 16
+FanSpeedLowPin = 21		# groen
+FanSpeedMediumPin = 20	# geel
+FanSpeedHighPin = 16	# rood
 
 stopThreadFan = False
 
@@ -80,8 +80,9 @@ if __name__ == "__main__":
 	print("Starting FanScript")
 	setup()
 
-	print("Fan in low speed for 5 minutes")
-	setFan("low", 5)
+	minutes = 1
+	print(f"Fan in low speed for {minutes} minute(s)")
+	setFan("low", minutes)
 
 	cleanup()
 	print("Clean exit!")

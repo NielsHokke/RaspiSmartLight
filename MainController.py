@@ -1,7 +1,7 @@
 import zmq
 import threading
 import json
-from neopixel import Color
+from rpi_ws281x import Color
 from datetime import datetime
 
 import MainLight
@@ -11,9 +11,10 @@ import Fan
 
 
 # Connect to webSocket
-context = zmq.Context()
-socket = context.socket(zmq.REP)
-socket.bind("tcp://127.0.0.1:5555")
+ctx = zmq.Context()
+socket = ctx.socket(zmq.SUB)
+socket.setsockopt_string(zmq.SUBSCRIBE,'')
+socket.connect("tcp://127.0.0.1:5555")
 
 # Initialise MainLight
 MainLight.setup()
@@ -73,9 +74,9 @@ def stopThreads(M, R, LB, LO, RGB=False, FAN=False):
 
 # Main Command listener
 try:
-	print "listening for commands..."
+	print("listening for commands...")
 	while True:
-		message = socket.recv()
+		message = socket.recv_string()
 		print("Received request: %s" % message)
 
 # MAIN LIGHT CMD's
@@ -118,11 +119,11 @@ try:
 				threadHandleLB.start()
 				threadHandleLO.start()
 			except:
-				print "Error: unable to start all threads"
+				print("Error: unable to start all threads")
 
 			status = {'Midden': M, 'Rechts': M, 'LinksBoven': M, 'LinksOnder': M}
 			reply = json.dumps(status)
-			socket.send(reply)
+			socket.send_string(reply)
 
 		elif "midden" in message:
 			stopThreads(True, False, False, False)
@@ -147,12 +148,12 @@ try:
 				threadHandleM.daemon = True
 				threadHandleM.start()
 			except:
-				print "Error: unable to start all threads"
+				print("Error: unable to start all threads")
 
 			status = MainLight.status()
 			status['Midden'] = M
 			reply = json.dumps(status)
-			socket.send(reply)
+			socket.send_string(reply)
 
 		elif "rechts" in message:
 			stopThreads(False, True, False, False)
@@ -177,11 +178,11 @@ try:
 				threadHandleR.daemon = True
 				threadHandleR.start()
 			except:
-				print "Error: unable to start all threads"
+				print("Error: unable to start all threads")
 			status = MainLight.status()
 			status['Rechts'] = M
 			reply = json.dumps(status)
-			socket.send(reply)
+			socket.send_string(reply)
 
 		elif "links_boven" in message:
 			stopThreads(False, False, True, False)
@@ -207,11 +208,11 @@ try:
 				threadHandleLB.start()
 
 			except:
-				print "Error: unable to start all threads"
+				print("Error: unable to start all threads")
 			status = MainLight.status()
 			status['LinksBoven'] = M
 			reply = json.dumps(status)
-			socket.send(reply)
+			socket.send_string(reply)
 
 
 		elif "links_onder" in message:
@@ -237,15 +238,15 @@ try:
 				threadHandleLO.daemon = True
 				threadHandleLO.start()
 			except:
-				print "Error: unable to start all threads"
+				print("Error: unable to start all threads")
 			status = MainLight.status()
 			status['LinksOnder'] = M
 			reply = json.dumps(status)
-			socket.send(reply)
+			socket.send_string(reply)
 
 		elif message == "status":
 			reply = json.dumps(MainLight.status())
-			socket.send(reply)
+			socket.send_string(reply)
 			print(reply)
 
 # RGB LIGHT CMD's
@@ -260,13 +261,13 @@ try:
 				#     threadHandleRGB.daemon = True
 				#     threadHandleRGB.start()
 				# except:
-				#     print "Error: unable to start all threads"
+				#     print("Error: unable to start all threads")
 				pass
 			else:
 				RGBLight.setTemp(int(value))
 
 			reply = json.dumps(MainLight.status())
-			socket.send(reply)
+			socket.send_string(reply)
 
 		elif "clear" in message:
 			stopThreads(False, False, False, False, True)
@@ -274,7 +275,7 @@ try:
 			RGBLight.setColor(Color(0, 0, 0))
 
 			reply = json.dumps(MainLight.status())
-			socket.send(reply)
+			socket.send_string(reply)
 
 		elif "set_color" in message:
 			stopThreads(False, False, False, False, True)
@@ -283,7 +284,7 @@ try:
 			RGBLight.setColor(Color(int(R), int(G), int(B)))
 
 			reply = json.dumps(MainLight.status())
-			socket.send(reply)
+			socket.send_string(reply)
 
 		elif "rainbow" in message:
 			stopThreads(False, False, False, False, True)
@@ -293,10 +294,10 @@ try:
 				threadHandleRGB.daemon = True
 				threadHandleRGB.start()
 			except:
-				print "Error: unable to start all threads"
+				print("Error: unable to start all threads")
 
 			reply = json.dumps(MainLight.status())
-			socket.send(reply)
+			socket.send_string(reply)
 
 		elif "fade_to_color" in message:
 			stopThreads(False, False, False, False, True)
@@ -309,10 +310,10 @@ try:
 				threadHandleRGB.daemon = True
 				threadHandleRGB.start()
 			except:
-				print "Error: unable to start all threads"
+				print("Error: unable to start all threads")
 
 			reply = json.dumps(MainLight.status())
-			socket.send(reply)
+			socket.send_string(reply)
 
 # FAN CMD's
 
@@ -324,10 +325,10 @@ try:
 				threadHandleFAN.daemon = True
 				threadHandleFAN.start()
 			except:
-				print "Error: unable to start all threads"
+				print("Error: unable to start all threads")
 
 			reply = json.dumps(MainLight.status())
-			socket.send(reply)
+			socket.send_string(reply)
 
 		elif "set_fan" in message:
 			stopThreads(False, False, False, False, False, True)
@@ -340,10 +341,10 @@ try:
 				threadHandleFAN.daemon = True
 				threadHandleFAN.start()
 			except:
-				print "Error: unable to start all threads"
+				print("Error: unable to start all threads")
 
 			reply = json.dumps(MainLight.status())
-			socket.send(reply)
+			socket.send_string(reply)
 
 
 
@@ -352,16 +353,16 @@ try:
 		elif "test" in message:
 			time = str(datetime.now())
 			print(time + " " + message)
-			socket.send(time)
+			socket.send_string(time)
 
 		else:
-			socket.send("Error: unknown command: " + message)
+			socket.send_string("Error: unknown command: " + message)
 			print("Error: unknown command: " + message)
 
 except KeyboardInterrupt:
 	pass
 
-print "\nclean exit!"
+print("\nclean exit!")
 stopThreads(True, True, True, True)
 MainLight.cleanup()
 RGBLight.cleanup()
